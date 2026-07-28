@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Tracker</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --border:#262b35;
+    --text:#e8eaed; --muted:#8a90a0; --accent:#4f8cff;
+    --green:#3ecf8e; --amber:#f5a623;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--text); padding:16px; max-width:480px; margin:0 auto;
+  }
+  h1{font-size:19px; margin:0 0 14px; text-align:center;}
+
+  .total{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:16px; text-align:center; margin-bottom:14px;
+  }
+  .total .label{font-size:12px; color:var(--muted);}
+  .total .value{font-size:28px; font-weight:700; color:var(--amber); margin-top:2px;}
+
+  form{display:flex; gap:8px; margin-bottom:8px;}
+  input{
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:12px; border-radius:10px; font-size:15px; font-family:inherit;
+  }
+  #fItem{flex:2; min-width:0;}
+  #fAmount{flex:1; min-width:0;}
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0;}
+  input[type=number]{-moz-appearance:textfield;}
+  button{
+    background:var(--accent); color:#fff; border:none; padding:0 16px; border-radius:10px;
+    font-size:20px; font-weight:600; cursor:pointer;
+  }
+  .attachbtn{
+    background:var(--card); border:1px solid var(--border); color:var(--muted);
+    font-size:17px; padding:0 12px; border-radius:10px; flex-shrink:0;
+  }
+  .attachbtn.has-file{color:var(--green); border-color:var(--green);}
+  .preview-row{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .preview-row img{width:36px; height:36px; object-fit:cover; border-radius:6px; border:1px solid var(--border);}
+  .preview-row span{font-size:12px; color:var(--muted); flex:1;}
+  .preview-row .rm{color:var(--muted); cursor:pointer; font-size:14px; padding:4px;}
+
+  .item{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:12px 14px; margin-bottom:8px; display:flex; align-items:center; gap:10px;
+  }
+  .item.reimbursed{opacity:.5;}
+  .item .name{flex:1; font-size:14px;}
+  .item .name .amt{display:block; font-size:16px; font-weight:700; margin-top:1px;}
+  .item .dot{
+    width:11px; height:11px; border-radius:50%; flex-shrink:0; cursor:pointer;
+    border:2px solid var(--muted);
+  }
+  .item .dot.pending{background:var(--amber); border-color:var(--amber);}
+  .item .dot.requested{background:var(--accent); border-color:var(--accent);}
+  .item .dot.reimbursed{background:var(--green); border-color:var(--green);}
+  .item .del{color:var(--muted); font-size:16px; cursor:pointer; padding:4px;}
+  .item .receipt-thumb{width:32px; height:32px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:pointer; flex-shrink:0;}
+
+  .photo-modal img{width:100%; border-radius:8px; display:block;}
+
+  .empty{text-align:center; color:var(--muted); padding:40px 0; font-size:14px;}
+
+  .askbtn{
+    width:100%; background:var(--amber); color:#1a1200; padding:14px; border-radius:12px;
+    font-size:15px; font-weight:700; margin-top:10px; display:none;
+  }
+
+  .modal-bg{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); align-items:center;
+    justify-content:center; padding:20px;
+  }
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; max-width:420px; width:100%; max-height:75vh; overflow-y:auto;}
+  .modal pre{white-space:pre-wrap; font-family:inherit; font-size:13px; background:var(--bg); padding:10px; border-radius:8px; border:1px solid var(--border);}
+  .modal .row{display:flex; gap:8px; margin-top:10px;}
+  .modal .row button{flex:1; font-size:14px; padding:10px; border-radius:8px;}
+  .modal .row .close{background:var(--bg); color:var(--text); border:1px solid var(--border);}
+
+  .legend{display:flex; gap:14px; justify-content:center; font-size:11px; color:var(--muted); margin:14px 0;}
+  .legend span{display:flex; align-items:center; gap:4px;}
+  .legend i{width:9px; height:9px; border-radius:50%; display:inline-block;}
+</style>
+</head>
+<body>
+
+<h1>Expense Tracker</h1>
+
+<div class="total">
+  <div class="label">Owed to you (pending + requested)</div>
+  <div class="value" id="totalOwed">₹0</div>
+</div>
+
+<form id="addForm">
+  <input type="text" id="fItem" placeholder="What did you buy?" required>
+  <input type="number" id="fAmount" step="0.01" min="0" placeholder="₹" required>
+  <button type="button" class="attachbtn" id="attachBtn" title="Attach receipt/bill">📎</button>
+  <input type="file" id="fReceipt" accept="image/*" capture="environment" style="display:none;">
+  <button type="submit">+</button>
+</form>
+
+<div class="preview-row" id="previewRow" style="display:none;">
+  <img id="previewImg">
+  <span>Receipt attached</span>
+  <div class="rm" id="previewRemove">✕</div>
+</div>
+
+<div class="legend">
+  <span><i style="background:var(--amber)"></i> pending</span>
+  <span><i style="background:var(--accent)"></i> asked</span>
+  <span><i style="background:var(--green)"></i> paid</span>
+</div>
+
+<div id="list"></div>
+
+<button class="askbtn" id="askBtn">Ask boss for pending amount</button>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 style="margin-top:0;">Send this to your boss</h3>
+    <pre id="modalText"></pre>
+    <div class="row">
+      <button class="close" id="modalClose">Close</button>
+      <button id="modalCopy">Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="photoModalBg">
+  <div class="modal photo-modal">
+    <h3 style="margin-top:0;">Receipt</h3>
+    <img id="photoModalImg" src="">
+    <div class="row">
+      <button class="close" id="photoModalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let expenses = [];
+const KEY = 'expenses_simple';
+
+function fmt(n){
+  return '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+}
+
+async function load(){
+  try{
+    const res = await window.storage.get(KEY);
+    expenses = res ? JSON.parse(res.value) : [];
+  }catch(e){ expenses = []; }
+  render();
+}
+async function save(){
+  try{ await window.storage.set(KEY, JSON.stringify(expenses)); }
+  catch(e){ console.error(e); }
+}
+
+let pendingReceipt = null;
+
+document.getElementById('attachBtn').addEventListener('click', ()=>{
+  document.getElementById('fReceipt').click();
+});
+
+document.getElementById('fReceipt').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 800;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingReceipt = canvas.toDataURL('image/jpeg', 0.6);
+      document.getElementById('previewImg').src = pendingReceipt;
+      document.getElementById('previewRow').style.display = 'flex';
+      document.getElementById('attachBtn').classList.add('has-file');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('previewRemove').addEventListener('click', ()=>{
+  pendingReceipt = null;
+  document.getElementById('fReceipt').value = '';
+  document.getElementById('previewRow').style.display = 'none';
+  document.getElementById('attachBtn').classList.remove('has-file');
+});
+
+document.getElementById('addForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const item = document.getElementById('fItem').value.trim();
+  const amount = parseFloat(document.getElementById('fAmount').value);
+  if(!item || !amount) return;
+  expenses.unshift({
+    id: 'e'+Date.now()+Math.random().toString(36).slice(2,6),
+    item, amount, status:'pending', date: new Date().toLocaleDateString('en-IN'),
+    receipt: pendingReceipt
+  });
+  e.target.reset();
+  pendingReceipt = null;
+  document.getElementById('previewRow').style.display = 'none';
+  document.getElementById('attachBtn').classList.remove('has-file');
+  document.getElementById('fItem').focus();
+  await save(); render();
+});
+
+function viewReceipt(id){
+  const x = expenses.find(e=>e.id===id);
+  if(!x || !x.receipt) return;
+  document.getElementById('photoModalImg').src = x.receipt;
+  document.getElementById('photoModalBg').classList.add('show');
+}
+document.getElementById('photoModalClose').addEventListener('click', ()=>{
+  document.getElementById('photoModalBg').classList.remove('show');
+});
+
+async function cycleStatus(id){
+  const order = ['pending','requested','reimbursed'];
+  const x = expenses.find(e=>e.id===id);
+  if(!x) return;
+  x.status = order[(order.indexOf(x.status)+1) % order.length];
+  await save(); render();
+}
+async function del(id){
+  expenses = expenses.filter(e=>e.id!==id);
+  await save(); render();
+}
+
+document.getElementById('askBtn').addEventListener('click', async ()=>{
+  const owed = expenses.filter(x=>x.status!=='reimbursed');
+  if(owed.length===0) return;
+  let total = 0;
+  let lines = owed.slice().reverse().map((x,i)=>{
+    total += Number(x.amount);
+    return `${i+1}. ${x.item} — ${fmt(x.amount)}`;
+  });
+  lines.push('', `Total: ${fmt(total)}`);
+  document.getElementById('modalText').textContent = lines.join('\n');
+  document.getElementById('modalBg').classList.add('show');
+  owed.forEach(x=>{ if(x.status==='pending') x.status='requested'; });
+  await save(); render();
+});
+
+document.getElementById('modalClose').addEventListener('click', ()=>{
+  document.getElementById('modalBg').classList.remove('show');
+});
+document.getElementById('modalCopy').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(document.getElementById('modalText').textContent).then(()=>{
+    const b = document.getElementById('modalCopy');
+    const old = b.textContent; b.textContent='Copied!';
+    setTimeout(()=>b.textContent=old, 1000);
+  });
+});
+
+function render(){
+  const list = document.getElementById('list');
+  if(expenses.length===0){
+    list.innerHTML = `<div class="empty">No expenses yet. Add your first one above.</div>`;
+  } else {
+    list.innerHTML = expenses.map(x=>`
+      <div class="item ${x.status==='reimbursed'?'reimbursed':''}">
+        <div class="dot ${x.status}" onclick="cycleStatus('${x.id}')" title="Tap to change status"></div>
+        <div class="name">${escapeHtml(x.item)}<span class="amt">${fmt(x.amount)}</span></div>
+        ${x.receipt ? `<img class="receipt-thumb" src="${x.receipt}" onclick="viewReceipt('${x.id}')">` : ''}
+        <div class="del" onclick="del('${x.id}')">✕</div>
+      </div>
+    `).join('');
+  }
+
+  const owed = expenses.filter(x=>x.status!=='reimbursed').reduce((s,x)=>s+Number(x.amount),0);
+  document.getElementById('totalOwed').textContent = fmt(owed);
+
+  const pending = expenses.filter(x=>x.status==='pending');
+  document.getElementById('askBtn').style.display = pending.length>0 ? 'block' : 'none';
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+load();
+</script>
+
+</body>
+</html>
