@@ -454,7 +454,7 @@
 
     <div class="autosave-note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-      <span>Everything you log — entries, receipts, settings — saves automatically. It's all still here if you refresh or close the app. Use backup only if you want an extra copy, or to move to a new phone.</span>
+      <span>Everything you log — entries, receipts, settings — saves automatically to this browser. It's still here after a refresh or closing the app. It's tied to this browser/device though, so download a backup before switching phones or clearing browser data.</span>
     </div>
   </div>
 
@@ -500,12 +500,28 @@ function monthLabel(){ return cursor.toLocaleDateString('en-IN',{month:'short',y
 const sunIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>';
 const moonIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>';
 
+async function storageGet(key){
+  if(window.storage){
+    try{
+      const res = await window.storage.get(key, false);
+      return res ? res.value : null;
+    }catch(e){
+      return null; // key not created yet - normal on first run
+    }
+  }
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  if(window.storage){
+    try{ await window.storage.set(key, value, false); return; }catch(e){ /* fall through */ }
+  }
+  try{ localStorage.setItem(key, value); }catch(e){ console.error('Save failed', e); }
+}
+
 async function loadTheme(){
   let theme = 'light';
-  try{
-    const res = await window.storage.get(THEME_KEY, false);
-    if(res) theme = res.value;
-  }catch(e){}
+  const val = await storageGet(THEME_KEY);
+  if(val) theme = val;
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('theme-toggle').innerHTML = theme === 'dark' ? sunIcon : moonIcon;
 }
@@ -514,19 +530,16 @@ document.getElementById('theme-toggle').onclick = async ()=>{
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   document.getElementById('theme-toggle').innerHTML = next === 'dark' ? sunIcon : moonIcon;
-  try{ await window.storage.set(THEME_KEY, next, false); }catch(e){}
+  await storageSet(THEME_KEY, next);
 };
 
 async function load(){
-  try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    entries = res ? JSON.parse(res.value) : [];
-  }catch(e){ entries = []; }
+  const val = await storageGet(STORAGE_KEY);
+  try{ entries = val ? JSON.parse(val) : []; }catch(e){ entries = []; }
   render();
 }
 async function save(){
-  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(entries), false); }
-  catch(e){ console.error('Save failed', e); }
+  await storageSet(STORAGE_KEY, JSON.stringify(entries));
 }
 
 document.getElementById('exp-date').value = todayStr();
