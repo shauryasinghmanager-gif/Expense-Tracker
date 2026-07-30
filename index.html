@@ -1,627 +1,644 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<title>Expenses</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Expenses">
-<meta name="theme-color" content="#000000">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a84ff'/%3E%3Ctext x='90' y='118' font-size='90' text-anchor='middle' fill='white'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a84ff'/%3E%3Ctext x='90' y='118' font-size='90' text-anchor='middle' fill='white'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
-    --bg:#000000;
-    --grouped:#1c1c1e;
-    --card:#2c2c2e;
-    --card2:#3a3a3c;
-    --sep:rgba(84,84,88,0.48);
-    --label:#ffffff;
-    --label2:#98989f;
-    --label3:#636366;
-    --blue:#0a84ff;
-    --green:#30d158;
-    --orange:#ff9f0a;
-    --red:#ff453a;
-    --safe-top:env(safe-area-inset-top);
-    --safe-bottom:env(safe-area-inset-bottom);
+    --bg:#F7F5F0;
+    --surface:#ffffff;
+    --text:#1B2430;
+    --text-soft:#6B7280;
+    --text-soft2:#9CA3AF;
+    --line:#E4DFD2;
+    --bar-track:#EFEBE1;
+    --green:#2F6F4E; --green-bg:rgba(47,111,78,.12);
+    --rust:#B54834; --rust-bg:rgba(181,72,52,.12);
+    --gold:#B9861F; --gold-bg:rgba(185,134,31,.14);
+    --appbar-h:56px; --subhead-h:46px; --nav-h:64px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html[data-theme="dark"]{
+    --bg:#12151B;
+    --surface:#1C212B;
+    --text:#F1EFE8;
+    --text-soft:#9AA3B2;
+    --text-soft2:#6E7686;
+    --line:#2B3340;
+    --bar-track:#2A3140;
+    --green:#4DAE7E; --green-bg:rgba(77,174,126,.16);
+    --rust:#E17A5F; --rust-bg:rgba(225,122,95,.16);
+    --gold:#DCB65A; --gold-bg:rgba(220,182,90,.16);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
   body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;
-    background:var(--bg);
-    color:var(--label);
-    -webkit-font-smoothing:antialiased;
-    overscroll-behavior-y:none;
-    padding-bottom:calc(96px + var(--safe-bottom));
+    margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;overscroll-behavior-y:contain;
+    transition:background .2s ease,color .2s ease;
   }
-  .scroller{
-    padding:calc(var(--safe-top) + 8px) 16px 8px;
-    max-width:600px;
-    margin:0 auto;
-  }
+  .app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;background:var(--bg);}
 
-  /* Large title header, iOS style */
-  .largetitle{
-    font-size:34px; font-weight:700; letter-spacing:-0.02em;
-    padding:4px 4px 14px;
+  .appbar{
+    position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    height:calc(var(--appbar-h) + var(--safe-top));padding-top:var(--safe-top);
+    background:#1B2430;color:#F7F5F0;display:flex;align-items:center;justify-content:space-between;
+    padding-left:18px;padding-right:8px;z-index:30;
   }
+  .appbar-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;letter-spacing:-0.01em;}
+  .appbar-actions{display:flex;align-items:center;gap:2px;}
+  .icon-btn{
+    width:38px;height:38px;border-radius:10px;border:none;background:none;color:#F7F5F0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon-btn svg{width:19px;height:19px;}
+  .icon-btn:active{background:rgba(255,255,255,.1);}
 
-  /* Summary card */
-  .summary{
-    background:var(--grouped);
-    border-radius:18px;
-    padding:18px 20px;
-    margin-bottom:22px;
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
+  .subhead{
+    position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    top:calc(var(--appbar-h) + var(--safe-top));height:var(--subhead-h);
+    background:var(--surface);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 16px;z-index:29;
   }
-  .summary .label{font-size:15px; color:var(--label2); font-weight:500;}
-  .summary .value{font-size:26px; font-weight:700; color:var(--orange); letter-spacing:-0.01em;}
-
-  /* Section header, iOS grouped-list style */
-  .section-title{
-    font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.02em;
-    color:var(--label2); padding:0 8px 6px; margin-top:8px;
-  }
-
-  /* Grouped list card */
-  .group{
-    background:var(--grouped);
-    border-radius:14px;
-    overflow:hidden;
-    margin-bottom:16px;
-  }
-  .row{
-    display:flex; align-items:center; gap:12px;
-    padding:12px 16px;
-    position:relative;
-    min-height:44px;
-    transition:background .1s ease;
-  }
-  .row:not(:last-child)::after{
-    content:"";
-    position:absolute; left:16px; right:0; bottom:0;
-    height:1px; background:var(--sep);
-  }
-  .row:active{background:rgba(255,255,255,0.04);}
-  .row.reimbursed{opacity:.45;}
-
-  .row .thumb{
-    width:38px; height:38px; border-radius:8px; object-fit:cover; flex-shrink:0;
-    border:1px solid var(--sep);
-  }
-  .row .noThumb{
-    width:38px; height:38px; border-radius:8px; flex-shrink:0;
-    background:var(--card2); display:flex; align-items:center; justify-content:center;
-    font-size:16px;
-  }
-  .row .main{flex:1; min-width:0;}
-  .row .item{font-size:17px; font-weight:500; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .row .date{font-size:13px; color:var(--label3); margin-top:1px;}
-  .row .right{display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex-shrink:0;}
-  .row .amt{font-size:17px; font-weight:600; font-variant-numeric:tabular-nums;}
-
   .pill{
-    font-size:12px; font-weight:600; padding:3px 10px; border-radius:20px;
-    border:none; min-height:auto;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border-radius:999px;
+    background:var(--bar-track);color:var(--text-soft);white-space:nowrap;
   }
-  .pill.pending{background:rgba(255,159,10,0.18); color:var(--orange);}
-  .pill.requested{background:rgba(10,132,255,0.18); color:var(--blue);}
-  .pill.reimbursed{background:rgba(48,209,88,0.18); color:var(--green);}
-
-  .swipe-del{
-    background:var(--red); color:#fff; border:none; border-radius:10px;
-    font-size:14px; font-weight:600; padding:8px 12px; flex-shrink:0;
+  .pill.owed{background:var(--rust-bg);color:var(--rust);}
+  .pill.surplus{background:var(--gold-bg);color:var(--gold);}
+  .month-nav{display:flex;align-items:center;gap:2px;}
+  .month-btn{width:30px;height:30px;border:none;background:none;color:var(--text-soft);display:flex;align-items:center;justify-content:center;border-radius:8px;}
+  .month-btn svg{width:16px;height:16px;}
+  .month-label{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;padding:5px 8px;border-radius:8px;color:var(--text);
+    min-width:78px;text-align:center;
   }
-
-  .empty{
-    text-align:center; color:var(--label2); padding:60px 20px; font-size:15px; line-height:1.5;
+  .alltime-toggle{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:5px 9px;border-radius:999px;border:1px solid var(--line);
+    background:none;color:var(--text-soft);margin-left:4px;
   }
-  .empty .emoji{font-size:36px; display:block; margin-bottom:10px;}
+  .alltime-toggle.active{background:var(--text);color:var(--bg);border-color:var(--text);}
 
-  /* Floating action button */
+  .screen{
+    padding:calc(var(--appbar-h) + var(--subhead-h) + var(--safe-top) + 16px) 16px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+    min-height:100vh;
+  }
+  .screen.hidden{display:none;}
+
+  .hero{
+    background:#1B2430;color:#F7F5F0;border-radius:18px;padding:22px 20px;margin-bottom:14px;
+    position:relative;overflow:hidden;
+  }
+  .hero::after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.06);}
+  .hero-label{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:rgba(247,245,240,.6);margin-bottom:8px;}
+  .hero-value{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:36px;letter-spacing:-0.01em;}
+  .hero-note{font-size:12.5px;color:rgba(247,245,240,.75);margin-top:6px;}
+  .hero-note.owed{color:#F1A48F;} .hero-note.surplus{color:#EAD08C;}
+
+  .month-summary{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--text-soft2);margin:2px 2px 8px;
+  }
+  .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;}
+  .stat-card .lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+  .stat-card .val{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;}
+  .stat-card.received .val{color:var(--gold);} .stat-card.spent .val{color:var(--rust);}
+
+  .search-wrap{position:relative;margin-bottom:10px;}
+  .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-soft2);}
+  .search-wrap input{width:100%;padding:11px 12px 11px 36px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:14px;color:var(--text);}
+  .chips{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
+  .chip{font-family:'IBM Plex Mono',monospace;font-size:11.5px;white-space:nowrap;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text-soft);}
+  .chip.active{background:var(--text);color:var(--bg);border-color:var(--text);}
+
+  .date-heading{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-soft2);margin:16px 2px 8px;}
+  .entry{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px;position:relative;}
+  .entry-icon{width:38px;height:38px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;}
+  .entry-icon.expense{background:var(--rust-bg);color:var(--rust);} .entry-icon.fund{background:var(--gold-bg);color:var(--gold);}
+  .entry-icon svg{width:18px;height:18px;}
+  .entry-mid{flex:1;min-width:0;}
+  .entry-title-row{display:flex;align-items:center;gap:6px;}
+  .entry-title{font-size:14.5px;font-weight:600;}
+  .status-pill{font-family:'IBM Plex Mono',monospace;font-size:9.5px;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pill.pending{background:var(--rust-bg);color:var(--rust);}
+  .status-pill.settled{background:var(--green-bg);color:var(--green);}
+  .entry-detail{font-size:12px;color:var(--text-soft);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;}
+  .entry-detail svg{width:11px;height:11px;flex:none;}
+  .entry-right{text-align:right;flex:none;}
+  .entry-amt{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14.5px;}
+  .entry-amt.out{color:var(--rust);} .entry-amt.in{color:var(--gold);}
+  .entry-running{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-soft2);margin-top:2px;}
+  .entry-running.neg{color:var(--rust);}
+
+  .empty{text-align:center;padding:50px 16px;color:var(--text-soft);font-size:13.5px;border:1px dashed var(--line);border-radius:14px;}
+
+  .insight-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .insight-card h3{font-family:'Space Grotesk',sans-serif;font-size:14px;margin:0 0 12px;}
+  .bar-row{margin-bottom:12px;} .bar-row:last-child{margin-bottom:0;}
+  .bar-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
+  .bar-top .amt{font-family:'IBM Plex Mono',monospace;color:var(--text-soft);}
+  .bar-track{height:8px;border-radius:6px;background:var(--bar-track);overflow:hidden;}
+  .bar-fill{height:100%;background:var(--text);border-radius:6px;}
+  .pending-stat{display:flex;justify-content:space-between;align-items:center;}
+  .pending-stat .amt{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--rust);}
+  .pending-stat .cnt{font-size:12px;color:var(--text-soft);}
+
+  .fab-wrap{
+    position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px);
+    pointer-events:none;z-index:35;
+  }
   .fab{
-    position:fixed; right:20px; bottom:calc(88px + var(--safe-bottom));
-    width:56px; height:56px; border-radius:50%;
-    background:var(--blue); color:#fff; border:none;
-    font-size:26px; font-weight:400; line-height:1;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 6px 20px rgba(10,132,255,0.45), 0 2px 6px rgba(0,0,0,0.3);
-    z-index:20;
-    transition:transform .12s ease;
+    position:absolute;right:18px;bottom:0;
+    width:56px;height:56px;border-radius:50%;background:var(--gold);color:#20180a;border:none;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 18px rgba(185,134,31,.45);
+    pointer-events:auto;
   }
-  .fab:active{transform:scale(0.92);}
+  .fab svg{width:24px;height:24px;}
 
-  /* Sticky ask-boss bar */
-  .askbar{
-    position:fixed; left:16px; right:16px; bottom:calc(88px + var(--safe-bottom));
-    background:var(--orange); color:#1a1000;
-    border:none; border-radius:16px; padding:16px;
-    font-size:16px; font-weight:700;
-    display:none; align-items:center; justify-content:center; gap:8px;
-    box-shadow:0 6px 20px rgba(255,159,10,0.35);
-    z-index:19;
+  .bottomnav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    height:calc(var(--nav-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);
+    background:var(--surface);border-top:1px solid var(--line);display:flex;z-index:30;
   }
-  .askbar:active{transform:scale(0.98);}
+  .nav-btn{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-soft2);font-family:'IBM Plex Mono',monospace;font-size:10.5px;}
+  .nav-btn svg{width:21px;height:21px;} .nav-btn.active{color:var(--text);}
 
-  /* Bottom sheet */
-  .sheet-bg{
-    position:fixed; inset:0; background:rgba(0,0,0,0.55);
-    display:none; z-index:30; opacity:0; transition:opacity .25s ease;
-  }
-  .sheet-bg.show{display:block; opacity:1;}
+  .sheet-backdrop{position:fixed;inset:0;background:rgba(10,14,20,.5);opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:40;}
+  .sheet-backdrop.open{opacity:1;pointer-events:auto;}
   .sheet{
-    position:fixed; left:0; right:0; bottom:0; z-index:31;
-    background:var(--grouped);
-    border-radius:20px 20px 0 0;
-    padding:10px 20px calc(20px + var(--safe-bottom));
-    transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1);
-    max-height:88vh; overflow-y:auto;
+    position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:480px;
+    background:var(--bg);border-radius:20px 20px 0 0;padding:10px 18px calc(18px + var(--safe-bottom));
+    z-index:45;transition:transform .28s cubic-bezier(.32,.72,0,1);max-height:88vh;overflow-y:auto;
   }
-  .sheet.show{transform:translateY(0);}
-  .sheet-handle{
-    width:36px; height:5px; background:var(--label3); border-radius:3px;
-    margin:6px auto 14px;
+  .sheet.open{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;background:var(--line);border-radius:3px;margin:4px auto 14px;}
+  .sheet h2{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0 0 14px;color:var(--text);}
+  .segmented{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px;}
+  .seg-btn{flex:1;border:none;background:none;padding:9px;border-radius:9px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text-soft);}
+  .seg-btn.active{background:var(--text);color:var(--bg);}
+  label{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;font-family:'IBM Plex Mono',monospace;}
+  .field{margin-bottom:13px;}
+  input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-family:'Inter',sans-serif;font-size:15px;background:var(--surface);color:var(--text);}
+  input:focus,select:focus{outline:2px solid var(--text);outline-offset:1px;}
+  .settle-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:13px;}
+  .settle-row .lbl2{font-size:14px;font-weight:500;}
+  .switch{position:relative;width:44px;height:26px;border-radius:999px;background:var(--bar-track);border:none;flex:none;}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .18s ease;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .switch.on{background:var(--green);}
+  .switch.on::after{transform:translateX(18px);}
+  .receipt-field label{margin-bottom:8px;}
+  .receipt-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1.5px dashed var(--line);
+    border-radius:11px;background:var(--surface);color:var(--text-soft);font-size:13.5px;font-family:'Inter',sans-serif;
   }
-  .sheet h2{font-size:20px; font-weight:700; margin:0 0 18px; text-align:center;}
+  .receipt-btn svg{width:17px;height:17px;}
+  .receipt-preview{position:relative;border-radius:11px;overflow:hidden;border:1px solid var(--line);}
+  .receipt-preview img{width:100%;display:block;max-height:180px;object-fit:cover;}
+  .receipt-remove{
+    position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(10,14,20,.65);
+    color:#fff;border:none;font-size:16px;display:flex;align-items:center;justify-content:center;
+  }
+  .save-btn{width:100%;padding:15px;border:none;border-radius:13px;background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:14.5px;font-weight:600;margin-top:6px;}
+  .save-btn:active{opacity:.85;}
+  .delete-link{width:100%;text-align:center;padding:12px;border:none;background:none;color:var(--rust);font-family:'IBM Plex Mono',monospace;font-size:13px;margin-top:4px;}
 
-  .field{margin-bottom:14px;}
-  .field label{font-size:13px; color:var(--label2); font-weight:600; display:block; margin-bottom:6px; padding-left:2px;}
-  .field input{
-    width:100%; background:var(--card); border:none; color:var(--label);
-    padding:14px 14px; border-radius:12px; font-size:17px; font-family:inherit;
+  .export-opt{
+    display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;
+    background:var(--surface);color:var(--text);font-size:14.5px;font-weight:500;margin-bottom:10px;font-family:'Inter',sans-serif;
   }
-  .field input::placeholder{color:var(--label3);}
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0;}
-  input[type=number]{-moz-appearance:textfield;}
+  .export-opt svg{width:19px;height:19px;color:var(--text-soft);flex:none;}
+  .export-note{font-size:12px;color:var(--text-soft);margin:-6px 0 14px;}
+  .export-divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+  .export-section-lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-soft2);margin-bottom:8px;}
+  .autosave-note{
+    display:flex;align-items:flex-start;gap:8px;background:var(--green-bg);color:var(--green);
+    border-radius:11px;padding:11px 12px;font-size:12px;line-height:1.4;margin-top:4px;
+  }
+  .autosave-note svg{width:15px;height:15px;flex:none;margin-top:1px;}
 
-  .attach-row{
-    display:flex; align-items:center; gap:10px;
-    background:var(--card); border-radius:12px; padding:10px 14px; margin-bottom:16px;
+  /* Receipts gallery */
+  .receipts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .receipt-thumb{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1;background:var(--surface);}
+  .receipt-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .receipt-thumb .thumb-tag{
+    position:absolute;bottom:0;left:0;right:0;padding:5px 6px 4px;
+    background:linear-gradient(transparent,rgba(0,0,0,.7));color:#fff;
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;line-height:1.3;
   }
-  .attach-row .icon{font-size:20px;}
-  .attach-row .txt{flex:1; font-size:15px; color:var(--label2);}
-  .attach-row img{width:36px; height:36px; border-radius:8px; object-fit:cover;}
-  .attach-row .rm{color:var(--red); font-size:14px; font-weight:600; padding:4px 8px;}
+  .receipt-thumb .thumb-tag .amt{display:block;font-weight:600;font-size:11px;}
 
-  .btn-primary{
-    width:100%; background:var(--blue); color:#fff; border:none;
-    padding:16px; border-radius:14px; font-size:17px; font-weight:700;
-    margin-top:4px;
+  .lightbox{
+    position:fixed;inset:0;background:rgba(8,10,14,.92);z-index:60;
+    display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity .18s ease;
   }
-  .btn-primary:active{transform:scale(0.98);}
-  .btn-plain{
-    width:100%; background:transparent; color:var(--blue); border:none;
-    padding:14px; font-size:17px; font-weight:500; margin-top:2px;
+  .lightbox.open{opacity:1;pointer-events:auto;}
+  .lightbox-top{display:flex;justify-content:flex-end;padding:calc(var(--safe-top) + 12px) 14px 6px;}
+  .lightbox-close{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:20px;}
+  .lightbox-img-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:0 16px;min-height:0;}
+  .lightbox-img-wrap img{max-width:100%;max-height:100%;border-radius:10px;object-fit:contain;}
+  .lightbox-info{
+    background:var(--bg);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + var(--safe-bottom));
   }
-
-  /* Photo sheet */
-  .photo-sheet{padding-bottom:calc(28px + var(--safe-bottom));}
-  .photo-sheet img{width:100%; border-radius:14px; display:block; margin-top:6px;}
-
-  /* Request sheet */
-  .req-list{
-    background:var(--card); border-radius:12px; padding:14px; font-size:15px;
-    line-height:1.7; color:var(--label); margin-bottom:16px; max-height:40vh; overflow-y:auto;
+  .lightbox-info .li-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;color:var(--text);}
+  .lightbox-info .li-sub{font-size:12.5px;color:var(--text-soft);margin-top:3px;}
+  .lightbox-info .li-amt{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--rust);margin-top:10px;}
+  .lightbox-info .li-edit{
+    width:100%;margin-top:14px;padding:13px;border:none;border-radius:12px;background:var(--text);color:var(--bg);
+    font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;
   }
-  .req-total{
-    display:flex; justify-content:space-between; font-size:17px; font-weight:700;
-    padding:0 4px 16px;
-  }
-  .req-total span:last-child{color:var(--orange);}
-
-  .toast{
-    position:fixed; left:50%; bottom:calc(100px + var(--safe-bottom));
-    transform:translateX(-50%); background:var(--card2); color:var(--label);
-    padding:10px 18px; border-radius:20px; font-size:14px; font-weight:600;
-    opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
-    z-index:40;
-  }
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
-
-  @media (prefers-reduced-motion: reduce){
-    *{transition:none !important;}
-  }
-
-  /* Splash screen */
-  .splash{
-    position:fixed; inset:0; background:var(--bg); z-index:100;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
-    transition:opacity .4s ease;
-  }
-  .splash.hide{opacity:0; pointer-events:none;}
-  .splash .icon{
-    width:76px; height:76px; border-radius:20px; background:var(--blue);
-    display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:700; color:#fff;
-    box-shadow:0 8px 24px rgba(10,132,255,0.4);
-  }
-  .splash .name{font-size:15px; color:var(--label2); font-weight:600;}
-
-  /* Install banner */
-  .install-banner{
-    margin:0 0 16px; background:var(--grouped); border-radius:14px; padding:14px 16px;
-    display:flex; align-items:center; gap:12px;
-  }
-  .install-banner .ic{font-size:22px;}
-  .install-banner .txt{flex:1; font-size:13px; color:var(--label2); line-height:1.4;}
-  .install-banner .txt b{color:var(--label); font-weight:600;}
-  .install-banner .x{color:var(--label3); font-size:18px; padding:4px;}
-
-  /* Bottom tab bar */
-  .tabbar{
-    position:fixed; left:0; right:0; bottom:0; z-index:25;
-    background:rgba(28,28,30,0.92);
-    -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px);
-    border-top:0.5px solid var(--sep);
-    display:flex; padding:8px 0 calc(6px + var(--safe-bottom));
-  }
-  .tab{
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
-    background:none; border:none; color:var(--label3); font-size:10px; font-weight:600;
-    padding:4px 0;
-  }
-  .tab .ticon{font-size:22px; line-height:1;}
-  .tab.active{color:var(--blue);}
-  .tab.active .ticon{filter:none;}
-
-  body{padding-bottom:calc(80px + var(--safe-bottom)) !important;}
-
-  /* Voice input */
-  .voice-btn{
-    width:100%; background:var(--card); border:1.5px solid var(--blue);
-    color:var(--blue); border-radius:14px; padding:14px;
-    font-size:16px; font-weight:700; margin-bottom:6px;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-  }
-  .voice-btn .vicon{font-size:18px;}
-  .voice-btn.listening{
-    background:var(--red); border-color:var(--red); color:#fff;
-    animation:pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{box-shadow:0 0 0 0 rgba(255,69,58,0.5);}
-    50%{box-shadow:0 0 0 10px rgba(255,69,58,0);}
-  }
-  .voice-hint{
-    text-align:center; font-size:12px; color:var(--label3); margin-bottom:16px; padding:0 8px;
-  }
-  .input-with-mic{position:relative;}
-  .input-with-mic input{padding-right:46px;}
-  .mic-mini{
-    position:absolute; right:6px; top:50%; transform:translateY(-50%);
-    width:32px; height:32px; border-radius:50%; border:none;
-    background:var(--card2); color:var(--label2); font-size:15px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .mic-mini.listening{background:var(--red); color:#fff; animation:pulse 1.2s ease-in-out infinite;}
 </style>
 </head>
 <body>
+<div class="app">
 
-<div class="splash" id="splash">
-  <div class="icon">₹</div>
-  <div class="name">Expenses</div>
-</div>
+  <header class="appbar">
+    <div class="appbar-title">Ledger</div>
+    <div class="appbar-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode"></button>
+      <button class="icon-btn" id="export-btn" aria-label="Export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+    </div>
+  </header>
 
-<div class="scroller">
-  <div class="largetitle" id="pageTitle">Expenses</div>
-
-  <div class="install-banner" id="installBanner" style="display:none;">
-    <span class="ic">📲</span>
-    <span class="txt"><b>Add to Home Screen</b><br>Open the Share menu and tap "Add to Home Screen" so this opens like a real app.</span>
-    <span class="x" id="dismissBanner">✕</span>
+  <div class="subhead">
+    <div class="pill" id="status-pill">Settled</div>
+    <div class="month-nav">
+      <button class="month-btn" id="month-prev">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="month-label" id="month-label">Jul 2026</div>
+      <button class="month-btn" id="month-next">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="alltime-toggle" id="alltime-btn">All</button>
+    </div>
   </div>
 
-  <div class="summary" id="summaryCard">
-    <div class="label">Owed to you</div>
-    <div class="value" id="totalOwed">₹0</div>
-  </div>
+  <main class="screen" id="screen-ledger">
+    <div class="hero">
+      <div class="hero-label">Overall balance</div>
+      <div class="hero-value" id="hero-value">₹0</div>
+      <div class="hero-note" id="hero-note">All settled</div>
+    </div>
 
-  <div id="listWrap"></div>
-</div>
+    <div class="month-summary" id="month-summary-label">This month</div>
+    <div class="stat-row">
+      <div class="stat-card received"><div class="lbl">Received</div><div class="val" id="stat-received">₹0</div></div>
+      <div class="stat-card spent"><div class="lbl">Spent</div><div class="val" id="stat-spent">₹0</div></div>
+    </div>
 
-<button class="fab" id="fabBtn">＋</button>
-<button class="askbar" id="askBtn">Ask boss for pending amount</button>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-box" placeholder="Search category, payee, note…">
+    </div>
+    <div class="chips">
+      <button class="chip active" data-filter="all">All</button>
+      <button class="chip" data-filter="expense">Spent</button>
+      <button class="chip" data-filter="fund">Received</button>
+      <button class="chip" data-filter="pending">Pending</button>
+    </div>
 
-<div class="tabbar">
-  <button class="tab active" id="tabActive">
-    <span class="ticon">📋</span>Active
-  </button>
-  <button class="tab" id="tabHistory">
-    <span class="ticon">✅</span>History
-  </button>
-</div>
+    <div id="ledger-list"></div>
+    <div class="empty" id="empty-state" style="display:none;">No entries for this view. Tap + to log an expense or record money received.</div>
+  </main>
 
-<!-- Add expense sheet -->
-<div class="sheet-bg" id="addSheetBg">
-  <div class="sheet" id="addSheet">
-    <div class="sheet-handle"></div>
-    <h2>New expense</h2>
+  <main class="screen hidden" id="screen-insights">
+    <div class="insight-card">
+      <h3>Pending settlement</h3>
+      <div class="pending-stat">
+        <div class="amt" id="pending-amt">₹0</div>
+        <div class="cnt" id="pending-cnt">0 expenses</div>
+      </div>
+    </div>
+    <div class="insight-card">
+      <h3>Spend by category</h3>
+      <div id="category-bars"></div>
+      <div class="empty" id="insights-empty" style="display:none;margin-top:4px;">No expenses logged yet.</div>
+    </div>
+    <div class="insight-card">
+      <h3>Received vs spent</h3>
+      <div class="bar-row">
+        <div class="bar-top"><span>Received</span><span class="amt" id="ins-received">₹0</span></div>
+        <div class="bar-track"><div class="bar-fill" id="ins-received-bar" style="background:var(--gold);width:0%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-top"><span>Spent</span><span class="amt" id="ins-spent">₹0</span></div>
+        <div class="bar-track"><div class="bar-fill" id="ins-spent-bar" style="background:var(--rust);width:0%"></div></div>
+      </div>
+    </div>
+  </main>
 
-    <button class="voice-btn" id="voiceBtn">
-      <span class="vicon">🎤</span>
-      <span id="voiceLabel">Tap to speak</span>
+  <main class="screen hidden" id="screen-receipts">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="receipt-search-box" placeholder="Search receipts by category, payee…">
+    </div>
+    <div class="receipts-grid" id="receipts-grid"></div>
+    <div class="empty" id="receipts-empty" style="display:none;">No receipt photos yet. Attach one when you log an expense and it'll show up here.</div>
+  </main>
+
+  <div class="fab-wrap">
+    <button class="fab" id="fab" aria-label="Add entry">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <div class="voice-hint" id="voiceHint">Say what you bought and how much, like "tea fifty rupees"</div>
+  </div>
 
-    <div class="field">
-      <label>What did you buy</label>
-      <div class="input-with-mic">
-        <input type="text" id="fItem" placeholder="e.g. Tea for office" autocomplete="off">
-        <button class="mic-mini" id="micItem" title="Speak this">🎤</button>
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-screen="ledger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>
+      Ledger
+    </button>
+    <button class="nav-btn" data-screen="insights">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="15"/></svg>
+      Insights
+    </button>
+    <button class="nav-btn" data-screen="receipts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Receipts
+    </button>
+  </nav>
+
+  <!-- Add/Edit sheet -->
+  <div class="sheet-backdrop" id="sheet-backdrop"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <h2 id="sheet-heading">Log an expense</h2>
+    <div class="segmented" id="type-segmented">
+      <button class="seg-btn active" data-type="expense">Expense</button>
+      <button class="seg-btn" data-type="fund">Received</button>
+    </div>
+
+    <div id="form-expense">
+      <div class="field"><label>Date</label><input type="date" id="exp-date"></div>
+      <div class="field">
+        <label>Category</label>
+        <select id="exp-category">
+          <option>Food</option><option>Travel</option><option>Client Entertainment</option>
+          <option>Stationery / Supplies</option><option>Accommodation</option><option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Amount (₹)</label><input type="number" id="exp-amount" placeholder="120" min="0" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>Paid to</label><input type="text" id="exp-paidto" placeholder="e.g. Cafe Coffee Day, Uber"></div>
+      <div class="field"><label>Purpose / note</label><input type="text" id="exp-note" placeholder="e.g. Team lunch, client visit"></div>
+
+      <div class="settle-row">
+        <span class="lbl2">Reimbursed by company</span>
+        <button class="switch" id="settle-switch"></button>
+      </div>
+
+      <div class="field receipt-field">
+        <label>Receipt photo</label>
+        <div id="receipt-empty-wrap">
+          <label class="receipt-btn" for="receipt-input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Attach a photo of the receipt
+          </label>
+        </div>
+        <div id="receipt-preview-wrap" style="display:none;">
+          <div class="receipt-preview">
+            <img id="receipt-preview-img" src="">
+            <button class="receipt-remove" id="receipt-remove-btn">×</button>
+          </div>
+        </div>
+        <input type="file" id="receipt-input" accept="image/*" capture="environment" style="display:none;">
       </div>
     </div>
-    <div class="field">
-      <label>Amount</label>
-      <div class="input-with-mic">
-        <input type="number" id="fAmount" inputmode="decimal" step="0.01" min="0" placeholder="₹0.00">
-        <button class="mic-mini" id="micAmount" title="Speak this">🎤</button>
-      </div>
+
+    <div id="form-fund" style="display:none;">
+      <div class="field"><label>Date</label><input type="date" id="fund-date"></div>
+      <div class="field"><label>Amount (₹)</label><input type="number" id="fund-amount" placeholder="100" min="0" step="0.01" inputmode="decimal"></div>
+      <div class="field"><label>Note</label><input type="text" id="fund-note" placeholder="e.g. Monthly float, reimbursement"></div>
     </div>
 
-    <input type="file" id="fReceipt" accept="image/*" capture="environment" style="display:none;">
-    <div class="attach-row" id="attachRow">
-      <span class="icon">📎</span>
-      <span class="txt" id="attachTxt">Attach receipt or bill</span>
+    <button class="save-btn" id="sheet-save">Add expense</button>
+    <button class="delete-link" id="sheet-delete" style="display:none;">Delete this entry</button>
+  </div>
+
+  <!-- Export sheet -->
+  <div class="sheet-backdrop" id="export-backdrop"></div>
+  <div class="sheet" id="export-sheet">
+    <div class="sheet-handle"></div>
+    <h2>Export</h2>
+    <div class="export-note" id="export-scope-note">Exporting: all entries</div>
+    <button class="export-opt" id="export-xlsx">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export as Excel (.xlsx)
+    </button>
+    <button class="export-opt" id="export-pdf">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Export as PDF
+    </button>
+
+    <hr class="export-divider">
+    <div class="export-section-lbl">Backup (all entries, not just this view)</div>
+    <button class="export-opt" id="backup-download">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download backup (.json)
+    </button>
+    <label class="export-opt" for="restore-input" style="cursor:pointer;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Restore from backup
+    </label>
+    <input type="file" id="restore-input" accept="application/json" style="display:none;">
+
+    <div class="autosave-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      <span>Everything you log — entries, receipts, settings — saves automatically. It's all still here if you refresh or close the app. Use backup only if you want an extra copy, or to move to a new phone.</span>
     </div>
-
-    <button class="btn-primary" id="saveBtn">Add expense</button>
-    <button class="btn-plain" id="cancelBtn">Cancel</button>
   </div>
-</div>
 
-<!-- Photo view sheet -->
-<div class="sheet-bg" id="photoSheetBg">
-  <div class="sheet photo-sheet" id="photoSheet">
-    <div class="sheet-handle"></div>
-    <h2>Receipt</h2>
-    <img id="photoImg" src="">
-    <button class="btn-plain" id="photoCloseBtn">Close</button>
+  <!-- Receipt lightbox -->
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-top">
+      <button class="lightbox-close" id="lightbox-close">×</button>
+    </div>
+    <div class="lightbox-img-wrap">
+      <img id="lightbox-img" src="">
+    </div>
+    <div class="lightbox-info">
+      <div class="li-title" id="lightbox-title">Food</div>
+      <div class="li-sub" id="lightbox-sub">12 Jul 2026 · Paid to Cafe Coffee Day</div>
+      <div class="li-amt" id="lightbox-amt">₹120</div>
+      <button class="li-edit" id="lightbox-edit">View / edit entry</button>
+    </div>
   </div>
-</div>
 
-<!-- Request sheet -->
-<div class="sheet-bg" id="reqSheetBg">
-  <div class="sheet" id="reqSheet">
-    <div class="sheet-handle"></div>
-    <h2>Send to your boss</h2>
-    <div class="req-list" id="reqList"></div>
-    <div class="req-total"><span>Total</span><span id="reqTotal">₹0</span></div>
-    <button class="btn-primary" id="reqCopyBtn">Copy text</button>
-    <button class="btn-plain" id="reqCloseBtn">Close</button>
-  </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-let expenses = [];
-let pendingReceipt = null;
-let currentTab = 'active';
-const KEY = 'expenses_v2';
-const BANNER_KEY = 'install_banner_dismissed';
-const TAB_KEY = 'pref_active_tab';
+const STORAGE_KEY = 'ledger-entries';
+const THEME_KEY = 'ledger-theme';
+let entries = [];
+let currentType = 'expense';
+let currentFilter = 'all';
+let editingId = null;
+let pendingReceipt = null; // dataURL staged for save
+let viewMode = 'all'; // 'all' | 'month'
+let cursor = new Date(); cursor.setDate(1);
 
 function fmt(n){
-  return '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+  const sign = n < 0 ? '-' : '';
+  return sign + '₹' + Math.abs(n).toLocaleString('en-IN', {minimumFractionDigits: n % 1 !== 0 ? 2 : 0, maximumFractionDigits:2});
 }
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 1400);
-}
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function uid(){ return 'e' + Date.now() + Math.random().toString(36).slice(2,7); }
+function ymKey(d){ const dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); }
+function cursorKey(){ return cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0'); }
+function monthLabel(){ return cursor.toLocaleDateString('en-IN',{month:'short',year:'numeric'}); }
 
-function isStandalone(){
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
+const sunIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>';
+const moonIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>';
 
-/* ---------- Storage (resilient) ----------
-   Uses window.storage when available (e.g. running inside Claude).
-   Falls back to localStorage automatically so data still survives
-   refresh/reopen when this file is saved and opened on its own,
-   like after "Add to Home Screen". */
-async function storageGet(key){
-  if(window.storage && typeof window.storage.get === 'function'){
-    try{
-      const res = await window.storage.get(key);
-      return res ? res.value : null;
-    }catch(e){ /* key missing or unavailable, fall through */ }
-  }
-  try{ return localStorage.getItem(key); }catch(e){ return null; }
+async function loadTheme(){
+  let theme = 'light';
+  try{
+    const res = await window.storage.get(THEME_KEY, false);
+    if(res) theme = res.value;
+  }catch(e){}
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').innerHTML = theme === 'dark' ? sunIcon : moonIcon;
 }
-async function storageSet(key, value){
-  if(window.storage && typeof window.storage.set === 'function'){
-    try{ await window.storage.set(key, value); return; }catch(e){ /* fall through */ }
-  }
-  try{ localStorage.setItem(key, value); }catch(e){ console.error('Storage failed', e); }
-}
-
-async function checkInstallBanner(){
-  if(isStandalone()) return;
-  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  if(!isIOS) return;
-  const dismissed = await storageGet(BANNER_KEY);
-  if(dismissed === 'true') return;
-  document.getElementById('installBanner').style.display = 'flex';
-}
-document.getElementById('dismissBanner').addEventListener('click', async ()=>{
-  document.getElementById('installBanner').style.display = 'none';
-  await storageSet(BANNER_KEY, 'true');
-});
-
-/* ---------- Tabs ---------- */
-async function switchTab(tab){
-  currentTab = tab;
-  document.getElementById('tabActive').classList.toggle('active', tab==='active');
-  document.getElementById('tabHistory').classList.toggle('active', tab==='history');
-  document.getElementById('pageTitle').textContent = tab==='active' ? 'Expenses' : 'History';
-  document.getElementById('summaryCard').style.display = tab==='active' ? 'flex' : 'none';
-  render();
-  await storageSet(TAB_KEY, tab);
-}
-document.getElementById('tabActive').addEventListener('click', ()=>switchTab('active'));
-document.getElementById('tabHistory').addEventListener('click', ()=>switchTab('history'));
+document.getElementById('theme-toggle').onclick = async ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('theme-toggle').innerHTML = next === 'dark' ? sunIcon : moonIcon;
+  try{ await window.storage.set(THEME_KEY, next, false); }catch(e){}
+};
 
 async function load(){
-  const raw = await storageGet(KEY);
-  try{ expenses = raw ? JSON.parse(raw) : []; }catch(e){ expenses = []; }
-
-  const savedTab = await storageGet(TAB_KEY);
-  if(savedTab === 'history') await switchTab('history'); else render();
-
-  checkInstallBanner();
-  setTimeout(()=>document.getElementById('splash').classList.add('hide'), 500);
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    entries = res ? JSON.parse(res.value) : [];
+  }catch(e){ entries = []; }
+  render();
 }
 async function save(){
-  await storageSet(KEY, JSON.stringify(expenses));
+  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(entries), false); }
+  catch(e){ console.error('Save failed', e); }
 }
 
-/* ---------- Add sheet ---------- */
-function openAddSheet(){
-  document.getElementById('addSheetBg').classList.add('show');
-  requestAnimationFrame(()=>document.getElementById('addSheet').classList.add('show'));
-  setTimeout(()=>document.getElementById('fItem').focus(), 300);
-  if(!speechSupported()){
-    document.getElementById('voiceBtn').style.display = 'none';
-    document.getElementById('voiceHint').style.display = 'none';
-    document.getElementById('micItem').style.display = 'none';
-    document.getElementById('micAmount').style.display = 'none';
-  }
-}
-function closeAddSheet(){
-  if(recognizer){ try{ recognizer.stop(); }catch(e){} }
-  document.getElementById('addSheet').classList.remove('show');
-  setTimeout(()=>document.getElementById('addSheetBg').classList.remove('show'), 300);
-}
-document.getElementById('fabBtn').addEventListener('click', openAddSheet);
-document.getElementById('cancelBtn').addEventListener('click', closeAddSheet);
-document.getElementById('addSheetBg').addEventListener('click', (e)=>{
-  if(e.target.id === 'addSheetBg') closeAddSheet();
+document.getElementById('exp-date').value = todayStr();
+document.getElementById('fund-date').value = todayStr();
+
+/* Screen switching */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.screen;
+    document.getElementById('screen-ledger').classList.toggle('hidden', target!=='ledger');
+    document.getElementById('screen-insights').classList.toggle('hidden', target!=='insights');
+    document.getElementById('screen-receipts').classList.toggle('hidden', target!=='receipts');
+    if(target==='insights') renderInsights();
+    if(target==='receipts') renderReceipts();
+  };
 });
 
-/* ---------- Voice input ---------- */
-const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-let recognizer = null;
-let activeMicTarget = null; // 'combined' | 'item' | 'amount'
+/* Month nav */
+document.getElementById('month-prev').onclick = ()=>{ viewMode='month'; cursor.setMonth(cursor.getMonth()-1); document.getElementById('alltime-btn').classList.remove('active'); render(); };
+document.getElementById('month-next').onclick = ()=>{ viewMode='month'; cursor.setMonth(cursor.getMonth()+1); document.getElementById('alltime-btn').classList.remove('active'); render(); };
+document.getElementById('alltime-btn').onclick = (e)=>{
+  viewMode = viewMode === 'all' ? 'month' : 'all';
+  e.target.classList.toggle('active', viewMode==='all');
+  render();
+};
 
-function speechSupported(){ return !!SpeechRecognitionAPI; }
-
-function wordsToNumber(text){
-  // Grab the first numeric-looking token (digits, decimals). Speech engines usually
-  // already transcribe spoken numbers as digits ("fifty" -> "50").
-  const m = text.match(/(\d+(\.\d+)?)/);
-  return m ? m[1] : null;
+/* Bottom sheet (add/edit) */
+const sheet = document.getElementById('sheet');
+const backdrop = document.getElementById('sheet-backdrop');
+function resetForm(){
+  editingId = null; pendingReceipt = null;
+  document.getElementById('exp-amount').value=''; document.getElementById('exp-paidto').value='';
+  document.getElementById('exp-note').value=''; document.getElementById('exp-date').value = todayStr();
+  document.getElementById('exp-category').selectedIndex = 0;
+  document.getElementById('fund-amount').value=''; document.getElementById('fund-note').value='';
+  document.getElementById('fund-date').value = todayStr();
+  document.getElementById('settle-switch').classList.remove('on');
+  document.getElementById('receipt-preview-wrap').style.display='none';
+  document.getElementById('receipt-empty-wrap').style.display='block';
+  document.getElementById('receipt-input').value='';
+  document.getElementById('sheet-delete').style.display='none';
 }
-
-function parseCombinedTranscript(text){
-  const amount = wordsToNumber(text);
-  let item = text;
-  if(amount){
-    item = text.replace(amount, '');
-  }
-  item = item.replace(/\b(rupees?|rs\.?|inr|only)\b/gi, '')
-             .replace(/\s{2,}/g, ' ')
-             .trim();
-  item = item.replace(/^(for|on|of)\s+/i, '').trim();
-  return { item, amount };
+function openSheetForCreate(){
+  resetForm();
+  setSegType('expense');
+  document.getElementById('sheet-heading').textContent = 'Log an expense';
+  document.getElementById('sheet-save').textContent = 'Add expense';
+  sheet.classList.add('open'); backdrop.classList.add('open');
 }
-
-function setMicUI(target, listening){
-  const map = {
-    combined: {btn: document.getElementById('voiceBtn'), label: document.getElementById('voiceLabel')},
-    item: {btn: document.getElementById('micItem')},
-    amount: {btn: document.getElementById('micAmount')}
-  };
-  const cfg = map[target];
-  if(!cfg) return;
-  cfg.btn.classList.toggle('listening', listening);
-  if(cfg.label) cfg.label.textContent = listening ? 'Listening…' : 'Tap to speak';
-}
-
-function startListening(target){
-  if(!speechSupported()){
-    showToast('Voice input isn\'t supported on this browser — please type instead');
-    return;
-  }
-  if(recognizer){
-    try{ recognizer.stop(); }catch(e){}
-  }
-  activeMicTarget = target;
-  recognizer = new SpeechRecognitionAPI();
-  recognizer.lang = 'en-IN';
-  recognizer.interimResults = true;
-  recognizer.continuous = false;
-  recognizer.maxAlternatives = 1;
-
-  setMicUI(target, true);
-
-  recognizer.onresult = (e)=>{
-    let transcript = '';
-    for(let i=0; i<e.results.length; i++){
-      transcript += e.results[i][0].transcript;
+function openSheetForEdit(entry){
+  resetForm();
+  editingId = entry.id;
+  setSegType(entry.type);
+  if(entry.type === 'expense'){
+    document.getElementById('exp-date').value = entry.date;
+    document.getElementById('exp-category').value = entry.category || 'Other';
+    document.getElementById('exp-amount').value = entry.amount;
+    document.getElementById('exp-paidto').value = entry.paidTo || '';
+    document.getElementById('exp-note').value = entry.note || '';
+    document.getElementById('settle-switch').classList.toggle('on', !!entry.settled);
+    if(entry.receipt){
+      pendingReceipt = entry.receipt;
+      document.getElementById('receipt-preview-img').src = entry.receipt;
+      document.getElementById('receipt-preview-wrap').style.display='block';
+      document.getElementById('receipt-empty-wrap').style.display='none';
     }
-    if(target === 'item'){
-      document.getElementById('fItem').value = transcript;
-    } else if(target === 'amount'){
-      const num = wordsToNumber(transcript);
-      if(num) document.getElementById('fAmount').value = num;
-    } else {
-      const parsed = parseCombinedTranscript(transcript);
-      if(parsed.item) document.getElementById('fItem').value = parsed.item;
-      if(parsed.amount) document.getElementById('fAmount').value = parsed.amount;
-    }
-  };
-  recognizer.onerror = (e)=>{
-    setMicUI(target, false);
-    if(e.error === 'not-allowed' || e.error === 'permission-denied'){
-      showToast('Microphone permission needed');
-    } else if(e.error !== 'aborted' && e.error !== 'no-speech'){
-      showToast('Couldn\'t hear that — try again');
-    }
-  };
-  recognizer.onend = ()=>{
-    setMicUI(target, false);
-  };
-  try{
-    recognizer.start();
-  }catch(e){
-    setMicUI(target, false);
+    document.getElementById('sheet-heading').textContent = 'Edit expense';
+    document.getElementById('sheet-save').textContent = 'Save changes';
+  } else {
+    document.getElementById('fund-date').value = entry.date;
+    document.getElementById('fund-amount').value = entry.amount;
+    document.getElementById('fund-note').value = entry.note || '';
+    document.getElementById('sheet-heading').textContent = 'Edit received amount';
+    document.getElementById('sheet-save').textContent = 'Save changes';
   }
+  document.getElementById('sheet-delete').style.display = 'block';
+  sheet.classList.add('open'); backdrop.classList.add('open');
 }
+function closeSheet(){ sheet.classList.remove('open'); backdrop.classList.remove('open'); }
+document.getElementById('fab').onclick = openSheetForCreate;
+backdrop.onclick = closeSheet;
 
-document.getElementById('voiceBtn').addEventListener('click', ()=>{
-  if(activeMicTarget && recognizer){ recognizer.stop(); return; }
-  startListening('combined');
-});
-document.getElementById('micItem').addEventListener('click', ()=>{
-  if(activeMicTarget && recognizer){ recognizer.stop(); return; }
-  startListening('item');
-});
-document.getElementById('micAmount').addEventListener('click', ()=>{
-  if(activeMicTarget && recognizer){ recognizer.stop(); return; }
-  startListening('amount');
+function setSegType(type){
+  currentType = type;
+  document.querySelectorAll('#type-segmented .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.type===type));
+  document.getElementById('form-expense').style.display = type==='expense' ? 'block':'none';
+  document.getElementById('form-fund').style.display = type==='fund' ? 'block':'none';
+}
+document.querySelectorAll('#type-segmented .seg-btn').forEach(btn=>{
+  btn.onclick = ()=>{
+    setSegType(btn.dataset.type);
+    const isEdit = !!editingId;
+    document.getElementById('sheet-heading').textContent = isEdit
+      ? (currentType==='expense' ? 'Edit expense' : 'Edit received amount')
+      : (currentType==='expense' ? 'Log an expense' : 'Record money received');
+    document.getElementById('sheet-save').textContent = isEdit ? 'Save changes' : (currentType==='expense' ? 'Add expense' : 'Add received amount');
+  };
 });
 
-document.getElementById('attachRow').addEventListener('click', ()=>{
-  document.getElementById('fReceipt').click();
-});
-document.getElementById('fReceipt').addEventListener('change', (e)=>{
+document.getElementById('settle-switch').onclick = (e)=>{ e.target.classList.toggle('on'); };
+
+/* Receipt attach with compression */
+document.getElementById('receipt-input').onchange = (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (ev)=>{
     const img = new Image();
     img.onload = ()=>{
-      const maxW = 800;
+      const maxW = 700;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement('canvas');
       canvas.width = img.width * scale;
@@ -629,189 +646,379 @@ document.getElementById('fReceipt').addEventListener('change', (e)=>{
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       pendingReceipt = canvas.toDataURL('image/jpeg', 0.6);
-      const row = document.getElementById('attachRow');
-      row.innerHTML = `<img src="${pendingReceipt}"><span class="txt">Receipt attached</span><span class="rm" id="rmReceipt">Remove</span>`;
-      document.getElementById('rmReceipt').addEventListener('click', (ev)=>{
-        ev.stopPropagation();
-        pendingReceipt = null;
-        document.getElementById('fReceipt').value = '';
-        row.innerHTML = `<span class="icon">📎</span><span class="txt" id="attachTxt">Attach receipt or bill</span>`;
-      });
+      document.getElementById('receipt-preview-img').src = pendingReceipt;
+      document.getElementById('receipt-preview-wrap').style.display='block';
+      document.getElementById('receipt-empty-wrap').style.display='none';
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-});
-
-document.getElementById('saveBtn').addEventListener('click', async ()=>{
-  const item = document.getElementById('fItem').value.trim();
-  const amount = parseFloat(document.getElementById('fAmount').value);
-  if(!item){ showToast('Enter what you bought'); return; }
-  if(!amount || amount<=0){ showToast('Enter an amount'); return; }
-
-  expenses.unshift({
-    id: 'e'+Date.now()+Math.random().toString(36).slice(2,6),
-    item, amount, status:'pending',
-    date: new Date().toLocaleDateString('en-IN', {day:'numeric', month:'short'}),
-    receipt: pendingReceipt
-  });
-
-  document.getElementById('fItem').value = '';
-  document.getElementById('fAmount').value = '';
+};
+document.getElementById('receipt-remove-btn').onclick = ()=>{
   pendingReceipt = null;
-  document.getElementById('fReceipt').value = '';
-  document.getElementById('attachRow').innerHTML = `<span class="icon">📎</span><span class="txt" id="attachTxt">Attach receipt or bill</span>`;
+  document.getElementById('receipt-preview-wrap').style.display='none';
+  document.getElementById('receipt-empty-wrap').style.display='block';
+  document.getElementById('receipt-input').value='';
+};
 
-  await save(); render();
-  closeAddSheet();
-  showToast('Expense added');
+document.getElementById('sheet-save').onclick = async ()=>{
+  if(currentType === 'expense'){
+    const date = document.getElementById('exp-date').value || todayStr();
+    const category = document.getElementById('exp-category').value;
+    const amount = parseFloat(document.getElementById('exp-amount').value);
+    const paidTo = document.getElementById('exp-paidto').value.trim();
+    const note = document.getElementById('exp-note').value.trim();
+    const settled = document.getElementById('settle-switch').classList.contains('on');
+    if(!amount || amount <= 0){ alert('Enter a valid amount.'); return; }
+    const payload = {type:'expense', date, category, paidTo, note, amount, settled, receipt: pendingReceipt};
+    if(editingId){
+      const idx = entries.findIndex(x=>x.id===editingId);
+      if(idx > -1) entries[idx] = {...entries[idx], ...payload};
+    } else {
+      entries.push({id:uid(), ...payload});
+    }
+  } else {
+    const date = document.getElementById('fund-date').value || todayStr();
+    const amount = parseFloat(document.getElementById('fund-amount').value);
+    const note = document.getElementById('fund-note').value.trim();
+    if(!amount || amount <= 0){ alert('Enter a valid amount.'); return; }
+    const payload = {type:'fund', date, note, amount};
+    if(editingId){
+      const idx = entries.findIndex(x=>x.id===editingId);
+      if(idx > -1) entries[idx] = {...entries[idx], ...payload};
+    } else {
+      entries.push({id:uid(), ...payload});
+    }
+  }
+  await save();
+  render();
+  closeSheet();
+};
+
+document.getElementById('sheet-delete').onclick = async ()=>{
+  if(!editingId) return;
+  if(!confirm('Delete this entry?')) return;
+  entries = entries.filter(e=>e.id!==editingId);
+  await save();
+  render();
+  closeSheet();
+};
+
+document.getElementById('search-box').oninput = render;
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.onclick = ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    render();
+  };
 });
 
-/* ---------- Status + delete ---------- */
-async function cycleStatus(id){
-  const order = ['pending','requested','reimbursed'];
-  const x = expenses.find(e=>e.id===id);
-  if(!x) return;
-  x.status = order[(order.indexOf(x.status)+1) % order.length];
-  await save(); render();
-}
-async function delExpense(id){
-  expenses = expenses.filter(e=>e.id!==id);
-  await save(); render();
-  showToast('Deleted');
+/* Toggle settle status quickly from the row */
+async function toggleSettled(id){
+  const idx = entries.findIndex(e=>e.id===id);
+  if(idx>-1){ entries[idx].settled = !entries[idx].settled; await save(); render(); }
 }
 
-/* ---------- Photo sheet ---------- */
-function openPhotoSheet(id){
-  const x = expenses.find(e=>e.id===id);
-  if(!x || !x.receipt) return;
-  document.getElementById('photoImg').src = x.receipt;
-  document.getElementById('photoSheetBg').classList.add('show');
-  requestAnimationFrame(()=>document.getElementById('photoSheet').classList.add('show'));
-}
-function closePhotoSheet(){
-  document.getElementById('photoSheet').classList.remove('show');
-  setTimeout(()=>document.getElementById('photoSheetBg').classList.remove('show'), 300);
-}
-document.getElementById('photoCloseBtn').addEventListener('click', closePhotoSheet);
-document.getElementById('photoSheetBg').addEventListener('click', (e)=>{
-  if(e.target.id === 'photoSheetBg') closePhotoSheet();
-});
+const expenseIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h12"/></svg>';
+const fundIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 7H9.5a2.5 2.5 0 000 5h5a2.5 2.5 0 010 5H6"/></svg>';
+const cameraIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>';
 
-/* ---------- Ask boss / request sheet ---------- */
-document.getElementById('askBtn').addEventListener('click', async ()=>{
-  const owed = expenses.filter(x=>x.status==='pending');
-  if(owed.length===0) return;
-  let total = 0;
-  const lines = owed.slice().reverse().map((x,i)=>{
-    total += Number(x.amount);
-    return `${i+1}. ${x.item} — ${fmt(x.amount)}`;
-  });
-  document.getElementById('reqList').innerHTML = lines.join('<br>');
-  document.getElementById('reqTotal').textContent = fmt(total);
-  document.getElementById('reqSheetBg').classList.add('show');
-  requestAnimationFrame(()=>document.getElementById('reqSheet').classList.add('show'));
-
-  owed.forEach(x=>x.status='requested');
-  await save(); render();
-});
-function closeReqSheet(){
-  document.getElementById('reqSheet').classList.remove('show');
-  setTimeout(()=>document.getElementById('reqSheetBg').classList.remove('show'), 300);
+function getEntriesForView(){
+  // entries scoped by month/all, before search/type filter — used for stats + export
+  if(viewMode === 'all') return entries;
+  return entries.filter(e=> ymKey(e.date) === cursorKey());
 }
-document.getElementById('reqCloseBtn').addEventListener('click', closeReqSheet);
-document.getElementById('reqSheetBg').addEventListener('click', (e)=>{
-  if(e.target.id === 'reqSheetBg') closeReqSheet();
-});
-document.getElementById('reqCopyBtn').addEventListener('click', ()=>{
-  const text = document.getElementById('reqList').innerText + '\n\nTotal: ' + document.getElementById('reqTotal').textContent;
-  navigator.clipboard.writeText(text).then(()=>showToast('Copied'));
-});
 
-/* ---------- Render ---------- */
 function render(){
-  const wrap = document.getElementById('listWrap');
-  const visible = currentTab === 'active'
-    ? expenses.filter(x=>x.status!=='reimbursed')
-    : expenses.filter(x=>x.status==='reimbursed');
+  document.getElementById('month-label').textContent = monthLabel();
 
-  if(visible.length===0){
-    wrap.innerHTML = currentTab === 'active'
-      ? `<div class="empty"><span class="emoji">🧾</span>No expenses yet.<br>Tap + to add your first one.</div>`
-      : `<div class="empty"><span class="emoji">✅</span>Nothing reimbursed yet.</div>`;
+  // Overall (all-time) balance — the true settlement figure
+  const totalReceivedAll = entries.filter(e=>e.type==='fund').reduce((s,e)=>s+e.amount,0);
+  const totalSpentAll = entries.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  const balanceAll = totalReceivedAll - totalSpentAll;
+  document.getElementById('hero-value').textContent = fmt(balanceAll);
+
+  const pill = document.getElementById('status-pill');
+  const heroNote = document.getElementById('hero-note');
+  pill.classList.remove('owed','surplus'); heroNote.classList.remove('owed','surplus');
+  if(balanceAll < -0.004){
+    pill.classList.add('owed'); pill.textContent = 'Owed to you';
+    heroNote.classList.add('owed'); heroNote.textContent = 'Company owes you ' + fmt(Math.abs(balanceAll));
+  } else if(balanceAll > 0.004){
+    pill.classList.add('surplus'); pill.textContent = 'Fund left';
+    heroNote.classList.add('surplus'); heroNote.textContent = 'Unspent fund in hand: ' + fmt(balanceAll);
   } else {
-    wrap.innerHTML = `<div class="section-title">${currentTab==='active' ? 'Recent' : 'Paid'}</div><div class="group">` +
-      visible.map(x=>`
-        <div class="row ${x.status==='reimbursed'?'reimbursed':''}" data-id="${x.id}">
-          ${x.receipt
-            ? `<img class="thumb" src="${x.receipt}" onclick="openPhotoSheet('${x.id}')">`
-            : `<div class="noThumb">🧾</div>`}
-          <div class="main">
-            <div class="item">${escapeHtml(x.item)}</div>
-            <div class="date">${x.date}</div>
-          </div>
-          <div class="right">
-            <div class="amt">${fmt(x.amount)}</div>
-            <button class="pill ${x.status}" onclick="cycleStatus('${x.id}')">${x.status==='pending'?'Pending':x.status==='requested'?'Asked':'Paid'}</button>
-          </div>
-        </div>
-      `).join('') + `</div><div style="text-align:center;color:var(--label3);font-size:12px;padding:10px 8px;">Press and hold an item to delete</div>`;
+    pill.textContent = 'Settled'; heroNote.textContent = 'All settled';
   }
 
-  const owedTotal = expenses.filter(x=>x.status!=='reimbursed').reduce((s,x)=>s+Number(x.amount),0);
-  document.getElementById('totalOwed').textContent = fmt(owedTotal);
+  // Scoped stats (month or all)
+  const scoped = getEntriesForView();
+  const scopedReceived = scoped.filter(e=>e.type==='fund').reduce((s,e)=>s+e.amount,0);
+  const scopedSpent = scoped.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  document.getElementById('stat-received').textContent = fmt(scopedReceived);
+  document.getElementById('stat-spent').textContent = fmt(scopedSpent);
+  document.getElementById('month-summary-label').textContent = viewMode==='all' ? 'All time' : monthLabel();
 
-  const pendingCount = expenses.filter(x=>x.status==='pending').length;
-  const askBtn = document.getElementById('askBtn');
-  const fab = document.getElementById('fabBtn');
-  if(pendingCount>0 && currentTab==='active'){
-    askBtn.style.display = 'flex';
-    fab.style.bottom = 'calc(158px + var(--safe-bottom))';
-  } else {
-    askBtn.style.display = 'none';
-    fab.style.bottom = 'calc(88px + var(--safe-bottom))';
-  }
-}
+  // Running balance always computed over full all-time chronological order
+  const sorted = [...entries].sort((a,b)=> new Date(a.date) - new Date(b.date) || a.id.localeCompare(b.id));
+  let running = 0;
+  const runningMap = {};
+  sorted.forEach(e=>{ running += e.type==='fund' ? e.amount : -e.amount; runningMap[e.id] = running; });
 
-function escapeHtml(s){
-  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
-}
-
-// long-press to delete
-let pressTimer = null;
-let pressedId = null;
-document.getElementById('listWrap').addEventListener('touchstart', (e)=>{
-  const row = e.target.closest('.row');
-  if(!row) return;
-  pressedId = row.dataset.id;
-  row.style.background = 'rgba(255,69,58,0.12)';
-  pressTimer = setTimeout(()=>{
-    if(pressedId && confirm('Delete this expense?')) delExpense(pressedId);
-    row.style.background = '';
-  }, 550);
-});
-['touchend','touchmove','touchcancel'].forEach(evt=>{
-  document.getElementById('listWrap').addEventListener(evt, (e)=>{
-    clearTimeout(pressTimer);
-    const row = e.target.closest && e.target.closest('.row');
-    if(row) row.style.background = '';
+  const search = document.getElementById('search-box').value.toLowerCase();
+  let filtered = scoped.filter(e=>{
+    if(currentFilter === 'expense' && e.type !== 'expense') return false;
+    if(currentFilter === 'fund' && e.type !== 'fund') return false;
+    if(currentFilter === 'pending' && !(e.type==='expense' && !e.settled)) return false;
+    if(!search) return true;
+    const hay = [e.category, e.paidTo, e.note].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(search);
   });
-});
-// mouse fallback for desktop testing
-document.getElementById('listWrap').addEventListener('mousedown', (e)=>{
-  const row = e.target.closest('.row');
-  if(!row) return;
-  pressedId = row.dataset.id;
-  pressTimer = setTimeout(()=>{
-    if(pressedId && confirm('Delete this expense?')) delExpense(pressedId);
-  }, 600);
-});
-['mouseup','mouseleave'].forEach(evt=>{
-  document.getElementById('listWrap').addEventListener(evt, ()=>clearTimeout(pressTimer));
-});
+  filtered.sort((a,b)=> new Date(b.date) - new Date(a.date));
 
+  const list = document.getElementById('ledger-list');
+  const empty = document.getElementById('empty-state');
+  list.innerHTML = '';
+
+  if(filtered.length === 0){
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    let lastDate = null;
+    filtered.forEach(e=>{
+      const dateFmt = new Date(e.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+      if(dateFmt !== lastDate){
+        const h = document.createElement('div'); h.className = 'date-heading'; h.textContent = dateFmt;
+        list.appendChild(h); lastDate = dateFmt;
+      }
+      const title = e.type==='expense' ? (e.category||'Expense') : 'Received from company';
+      const detailParts = [];
+      if(e.type==='expense' && e.paidTo) detailParts.push('Paid to ' + e.paidTo);
+      if(e.note) detailParts.push(e.note);
+      const r = runningMap[e.id] || 0;
+
+      const row = document.createElement('div');
+      row.className = 'entry';
+      row.innerHTML = `
+        <div class="entry-icon ${e.type}">${e.type==='expense' ? expenseIcon : fundIcon}</div>
+        <div class="entry-mid">
+          <div class="entry-title-row">
+            <div class="entry-title">${title}</div>
+            ${e.type==='expense' ? `<span class="status-pill ${e.settled?'settled':'pending'}" data-toggle-id="${e.id}">${e.settled?'Settled':'Pending'}</span>` : ''}
+          </div>
+          <div class="entry-detail">${e.receipt ? cameraIcon : ''}<span>${detailParts.join(' · ') || '\u00A0'}</span></div>
+        </div>
+        <div class="entry-right">
+          <div class="entry-amt ${e.type==='expense' ? 'out':'in'}">${e.type==='expense' ? '\u2212':'+'}${fmt(e.amount)}</div>
+          <div class="entry-running ${r<0 ? 'neg':''}">${fmt(r)}</div>
+        </div>
+      `;
+      row.addEventListener('click', (ev)=>{
+        if(ev.target.closest('.status-pill')) return;
+        openSheetForEdit(e);
+      });
+      const sp = row.querySelector('.status-pill');
+      if(sp){ sp.addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleSettled(e.id); }); }
+      list.appendChild(row);
+    });
+  }
+}
+
+function renderInsights(){
+  const scoped = getEntriesForView();
+  const expenses = scoped.filter(e=>e.type==='expense');
+  const totalReceived = scoped.filter(e=>e.type==='fund').reduce((s,e)=>s+e.amount,0);
+  const totalSpent = expenses.reduce((s,e)=>s+e.amount,0);
+  const maxTotal = Math.max(totalReceived, totalSpent, 1);
+
+  document.getElementById('ins-received').textContent = fmt(totalReceived);
+  document.getElementById('ins-spent').textContent = fmt(totalSpent);
+  document.getElementById('ins-received-bar').style.width = (totalReceived/maxTotal*100) + '%';
+  document.getElementById('ins-spent-bar').style.width = (totalSpent/maxTotal*100) + '%';
+
+  const pendingExpenses = expenses.filter(e=>!e.settled);
+  const pendingTotal = pendingExpenses.reduce((s,e)=>s+e.amount,0);
+  document.getElementById('pending-amt').textContent = fmt(pendingTotal);
+  document.getElementById('pending-cnt').textContent = pendingExpenses.length + (pendingExpenses.length===1?' expense':' expenses');
+
+  const byCat = {};
+  expenses.forEach(e=>{ byCat[e.category] = (byCat[e.category]||0) + e.amount; });
+  const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const wrap = document.getElementById('category-bars');
+  const emptyIns = document.getElementById('insights-empty');
+  wrap.innerHTML = '';
+  if(cats.length === 0){
+    emptyIns.style.display = 'block';
+  } else {
+    emptyIns.style.display = 'none';
+    const max = cats[0][1];
+    cats.forEach(([cat, amt])=>{
+      const row = document.createElement('div'); row.className = 'bar-row';
+      row.innerHTML = `<div class="bar-top"><span>${cat}</span><span class="amt">${fmt(amt)}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(amt/max*100)}%"></div></div>`;
+      wrap.appendChild(row);
+    });
+  }
+}
+
+/* Receipts gallery */
+document.getElementById('receipt-search-box').oninput = renderReceipts;
+
+function renderReceipts(){
+  const search = document.getElementById('receipt-search-box').value.toLowerCase();
+  let withReceipts = entries.filter(e=>e.type==='expense' && e.receipt);
+  if(search){
+    withReceipts = withReceipts.filter(e=>{
+      const hay = [e.category, e.paidTo, e.note].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
+  withReceipts.sort((a,b)=> new Date(b.date) - new Date(a.date));
+
+  const grid = document.getElementById('receipts-grid');
+  const empty = document.getElementById('receipts-empty');
+  grid.innerHTML = '';
+
+  if(withReceipts.length === 0){
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    withReceipts.forEach(e=>{
+      const dateFmt = new Date(e.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short'});
+      const thumb = document.createElement('div');
+      thumb.className = 'receipt-thumb';
+      thumb.innerHTML = `
+        <img src="${e.receipt}">
+        <div class="thumb-tag"><span class="amt">${fmt(e.amount)}</span>${dateFmt}</div>
+      `;
+      thumb.onclick = ()=> openLightbox(e);
+      grid.appendChild(thumb);
+    });
+  }
+}
+
+const lightbox = document.getElementById('lightbox');
+let lightboxEntryId = null;
+function openLightbox(e){
+  lightboxEntryId = e.id;
+  document.getElementById('lightbox-img').src = e.receipt;
+  document.getElementById('lightbox-title').textContent = e.category || 'Expense';
+  const dateFmt = new Date(e.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+  document.getElementById('lightbox-sub').textContent = dateFmt + (e.paidTo ? ' · Paid to ' + e.paidTo : '');
+  document.getElementById('lightbox-amt').textContent = fmt(e.amount);
+  lightbox.classList.add('open');
+}
+function closeLightbox(){ lightbox.classList.remove('open'); }
+document.getElementById('lightbox-close').onclick = closeLightbox;
+document.getElementById('lightbox-edit').onclick = ()=>{
+  const e = entries.find(x=>x.id===lightboxEntryId);
+  closeLightbox();
+  if(e) openSheetForEdit(e);
+};
+
+/* Backup / restore */
+document.getElementById('backup-download').onclick = ()=>{
+  const payload = { app:'ledger', exportedAt: new Date().toISOString(), entries };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ledger-backup-' + todayStr() + '.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById('restore-input').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      const incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+      if(!Array.isArray(incoming)) throw new Error('bad format');
+      const valid = incoming.every(x => x && x.id && x.type && typeof x.amount === 'number');
+      if(!valid) throw new Error('bad format');
+      if(!confirm(`This backup has ${incoming.length} entries. Restoring will replace everything currently in the app. Continue?`)) return;
+      entries = incoming;
+      await save();
+      render();
+      alert('Backup restored.');
+      exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
+    }catch(err){
+      alert("That file doesn't look like a valid ledger backup.");
+    }finally{
+      e.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+};
+
+/* Export */
+const exportSheet = document.getElementById('export-sheet');
+const exportBackdrop = document.getElementById('export-backdrop');
+document.getElementById('export-btn').onclick = ()=>{
+  document.getElementById('export-scope-note').textContent =
+    viewMode === 'all' ? 'Exporting: all entries' : ('Exporting: ' + monthLabel());
+  exportSheet.classList.add('open'); exportBackdrop.classList.add('open');
+};
+exportBackdrop.onclick = ()=>{ exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open'); };
+
+function exportRows(){
+  const scoped = [...getEntriesForView()].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  return scoped.map(e=>({
+    Date: new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    Type: e.type === 'expense' ? 'Expense' : 'Received',
+    'Category / Note': e.type === 'expense' ? (e.category || '') : (e.note || ''),
+    'Paid To': e.type === 'expense' ? (e.paidTo || '') : '',
+    'Notes': e.type === 'expense' ? (e.note || '') : '',
+    Amount: e.type === 'expense' ? -e.amount : e.amount,
+    Status: e.type === 'expense' ? (e.settled ? 'Settled' : 'Pending') : '—',
+    Receipt: e.receipt ? 'Yes' : 'No'
+  }));
+}
+
+document.getElementById('export-xlsx').onclick = ()=>{
+  const rows = exportRows();
+  if(rows.length === 0){ alert('No entries to export for this view.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+  const filename = 'ledger-' + (viewMode==='all' ? 'all' : cursorKey()) + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
+};
+
+document.getElementById('export-pdf').onclick = ()=>{
+  const rows = exportRows();
+  if(rows.length === 0){ alert('No entries to export for this view.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const scopeLabel = viewMode === 'all' ? 'All entries' : monthLabel();
+  doc.setFontSize(14);
+  doc.text('Expense Ledger — ' + scopeLabel, 14, 16);
+
+  const scoped = getEntriesForView();
+  const received = scoped.filter(e=>e.type==='fund').reduce((s,e)=>s+e.amount,0);
+  const spent = scoped.filter(e=>e.type==='expense').reduce((s,e)=>s+e.amount,0);
+  doc.setFontSize(10);
+  doc.text(`Received: Rs.${received.toFixed(2)}   Spent: Rs.${spent.toFixed(2)}   Balance: Rs.${(received-spent).toFixed(2)}`, 14, 23);
+
+  const body = rows.map(r => [r.Date, r.Type, r['Category / Note'], r['Paid To'], r.Amount.toFixed(2), r.Status]);
+  doc.autoTable({
+    startY: 28,
+    head: [['Date','Type','Category / Note','Paid To','Amount (₹)','Status']],
+    body,
+    styles:{fontSize:8},
+    headStyles:{fillColor:[27,36,48]}
+  });
+  const filename = 'ledger-' + (viewMode==='all' ? 'all' : cursorKey()) + '.pdf';
+  doc.save(filename);
+  exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
+};
+
+loadTheme();
 load();
 </script>
-
 </body>
 </html>
