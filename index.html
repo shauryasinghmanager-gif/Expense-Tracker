@@ -235,6 +235,22 @@
   }
   .autosave-note svg{width:15px;height:15px;flex:none;margin-top:1px;}
 
+  /* Custom in-app alert/confirm modal (no browser chrome, no site name shown) */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(8,10,14,.55);opacity:0;pointer-events:none;transition:opacity .15s ease;z-index:70;}
+  .modal-backdrop.open{opacity:1;pointer-events:auto;}
+  .modal-box{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);width:calc(100% - 56px);max-width:320px;
+    background:var(--surface);border-radius:16px;padding:20px 18px 16px;z-index:71;
+    opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+  .modal-box.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+  .modal-msg{font-size:14.5px;color:var(--text);line-height:1.5;white-space:pre-line;margin-bottom:18px;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-btn{flex:1;padding:11px;border-radius:10px;border:none;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;}
+  .modal-btn.confirm{background:var(--text);color:var(--bg);}
+  .modal-btn.cancel{background:var(--bar-track);color:var(--text-soft);}
+
   /* Receipts gallery */
   .receipts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .receipt-thumb{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1;background:var(--surface);}
@@ -490,6 +506,16 @@
     </div>
   </div>
 
+  <!-- Custom alert/confirm modal -->
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-box" id="modal-box">
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-btn confirm" id="modal-confirm">OK</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -509,6 +535,30 @@ function fmt(n){
 }
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function uid(){ return 'e' + Date.now() + Math.random().toString(36).slice(2,7); }
+
+/* Custom alert/confirm — replaces native browser popups so no site name is shown */
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalBox = document.getElementById('modal-box');
+const modalMsg = document.getElementById('modal-msg');
+const modalCancelBtn = document.getElementById('modal-cancel');
+const modalConfirmBtn = document.getElementById('modal-confirm');
+function showModal(message, isConfirm){
+  return new Promise(resolve=>{
+    modalMsg.textContent = message;
+    modalCancelBtn.style.display = isConfirm ? 'block' : 'none';
+    modalConfirmBtn.textContent = isConfirm ? 'Continue' : 'OK';
+    modalBackdrop.classList.add('open'); modalBox.classList.add('open');
+    const cleanup = (result)=>{
+      modalBackdrop.classList.remove('open'); modalBox.classList.remove('open');
+      modalConfirmBtn.onclick = null; modalCancelBtn.onclick = null;
+      resolve(result);
+    };
+    modalConfirmBtn.onclick = ()=>cleanup(true);
+    modalCancelBtn.onclick = ()=>cleanup(false);
+  });
+}
+function appAlert(message){ return showModal(message, false); }
+function appConfirm(message){ return showModal(message, true); }
 function ymKey(d){ const dt = new Date(d); return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0'); }
 function cursorKey(){ return cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0'); }
 function monthLabel(){ return cursor.toLocaleDateString('en-IN',{month:'short',year:'numeric'}); }
@@ -724,7 +774,7 @@ document.getElementById('sheet-save').onclick = async ()=>{
     const paidTo = document.getElementById('exp-paidto').value.trim();
     const note = document.getElementById('exp-note').value.trim();
     const settled = document.getElementById('settle-switch').classList.contains('on');
-    if(!amount || amount <= 0){ alert('Enter a valid amount.'); return; }
+    if(!amount || amount <= 0){ await appAlert('Enter a valid amount.'); return; }
     const payload = {type:'expense', date, category, paidTo, note, amount, receipt: pendingReceipt};
     let expenseEntry;
     if(editingId){
@@ -739,7 +789,7 @@ document.getElementById('sheet-save').onclick = async ()=>{
     const date = document.getElementById('fund-date').value || todayStr();
     const amount = parseFloat(document.getElementById('fund-amount').value);
     const note = document.getElementById('fund-note').value.trim();
-    if(!amount || amount <= 0){ alert('Enter a valid amount.'); return; }
+    if(!amount || amount <= 0){ await appAlert('Enter a valid amount.'); return; }
     const payload = {type:'fund', date, note, amount};
     if(editingId){
       const idx = entries.findIndex(x=>x.id===editingId);
@@ -755,7 +805,7 @@ document.getElementById('sheet-save').onclick = async ()=>{
 
 document.getElementById('sheet-delete').onclick = async ()=>{
   if(!editingId) return;
-  if(!confirm('Delete this entry?')) return;
+  if(!(await appConfirm('Delete this entry?'))) return;
   const target = entries.find(e=>e.id===editingId);
   // cascade: deleting an expense also removes its linked reimbursement transaction
   if(target && target.type==='expense' && target.reimbursementEntryId){
@@ -1015,14 +1065,14 @@ document.getElementById('restore-input').onchange = (e)=>{
       if(!Array.isArray(incoming)) throw new Error('bad format');
       const valid = incoming.every(x => x && x.id && x.type && typeof x.amount === 'number');
       if(!valid) throw new Error('bad format');
-      if(!confirm(`This backup has ${incoming.length} entries. Restoring will replace everything currently in the app. Continue?`)) return;
+      if(!(await appConfirm(`This backup has ${incoming.length} entries. Restoring will replace everything currently in the app.`))) return;
       entries = incoming;
       await save();
       render();
-      alert('Backup restored.');
+      await appAlert('Backup restored.');
       exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
     }catch(err){
-      alert("That file doesn't look like a valid ledger backup.");
+      await appAlert("That file doesn't look like a valid ledger backup.");
     }finally{
       e.target.value = '';
     }
@@ -1034,11 +1084,11 @@ document.getElementById('restore-input').onchange = (e)=>{
 const exportSheet = document.getElementById('export-sheet');
 
 document.getElementById('clear-all-btn').onclick = async ()=>{
-  if(entries.length === 0){ alert('There\'s nothing to clear — your ledger is already empty.'); return; }
+  if(entries.length === 0){ await appAlert('There\'s nothing to clear — your ledger is already empty.'); return; }
   const count = entries.length;
-  const sure = confirm(`Delete all ${count} entries and receipts?\n\nThis cannot be undone. If you want to keep a copy, tap "Download backup" first instead.`);
+  const sure = await appConfirm(`Delete all ${count} entries and receipts?\n\nThis cannot be undone. If you want to keep a copy, tap "Download backup" first instead.`);
   if(!sure) return;
-  const reallySure = confirm('Are you absolutely sure? This will permanently erase everything and restart the app with a clean slate.');
+  const reallySure = await appConfirm('Are you absolutely sure? This will permanently erase everything and restart the app with a clean slate.');
   if(!reallySure) return;
   entries = [];
   await save();
@@ -1046,7 +1096,7 @@ document.getElementById('clear-all-btn').onclick = async ()=>{
   renderInsights();
   renderReceipts();
   exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
-  alert('All data cleared. Starting fresh.');
+  await appAlert('All data cleared. Starting fresh.');
 };
 const exportBackdrop = document.getElementById('export-backdrop');
 document.getElementById('export-btn').onclick = ()=>{
@@ -1070,9 +1120,9 @@ function exportRows(){
   }));
 }
 
-document.getElementById('export-xlsx').onclick = ()=>{
+document.getElementById('export-xlsx').onclick = async ()=>{
   const rows = exportRows();
-  if(rows.length === 0){ alert('No entries to export for this view.'); return; }
+  if(rows.length === 0){ await appAlert('No entries to export for this view.'); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
@@ -1081,9 +1131,9 @@ document.getElementById('export-xlsx').onclick = ()=>{
   exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
 };
 
-document.getElementById('export-pdf').onclick = ()=>{
+document.getElementById('export-pdf').onclick = async ()=>{
   const rows = exportRows();
-  if(rows.length === 0){ alert('No entries to export for this view.'); return; }
+  if(rows.length === 0){ await appAlert('No entries to export for this view.'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   const scopeLabel = viewMode === 'all' ? 'All entries' : monthLabel();
