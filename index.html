@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>Ledger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -188,7 +189,13 @@
   .seg-btn.active{background:var(--text);color:var(--bg);}
   label{font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;font-family:'IBM Plex Mono',monospace;}
   .field{margin-bottom:13px;}
-  input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-family:'Inter',sans-serif;font-size:15px;background:var(--surface);color:var(--text);}
+  input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;font-family:'Inter',sans-serif;font-size:15px;background:var(--surface);color:var(--text);color-scheme:light;}
+  html[data-theme="dark"] input,html[data-theme="dark"] select{color-scheme:dark;}
+  input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{
+    -webkit-box-shadow:0 0 0 1000px var(--surface) inset;
+    -webkit-text-fill-color:var(--text);
+    caret-color:var(--text);
+  }
   input:focus,select:focus{outline:2px solid var(--text);outline-offset:1px;}
   .settle-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:13px;}
   .settle-row .lbl2{font-size:14px;font-weight:500;}
@@ -674,6 +681,32 @@ document.getElementById('receipt-remove-btn').onclick = ()=>{
   document.getElementById('receipt-input').value='';
 };
 
+/* Keeps a real "Reimbursement" transaction in sync with an expense's settled state */
+function syncReimbursement(expenseEntry, settled){
+  if(settled){
+    if(expenseEntry.reimbursementEntryId){
+      // already linked - just keep amount in sync in case it changed
+      const linked = entries.find(x=>x.id===expenseEntry.reimbursementEntryId);
+      if(linked) linked.amount = expenseEntry.amount;
+    } else {
+      const rid = uid();
+      entries.push({
+        id: rid, type:'fund', date: todayStr(),
+        note: 'Reimbursement — ' + (expenseEntry.category || 'expense'),
+        amount: expenseEntry.amount,
+        linkedExpenseId: expenseEntry.id
+      });
+      expenseEntry.reimbursementEntryId = rid;
+    }
+  } else {
+    if(expenseEntry.reimbursementEntryId){
+      entries = entries.filter(x=>x.id!==expenseEntry.reimbursementEntryId);
+      expenseEntry.reimbursementEntryId = null;
+    }
+  }
+  expenseEntry.settled = settled;
+}
+
 document.getElementById('sheet-save').onclick = async ()=>{
   if(currentType === 'expense'){
     const date = document.getElementById('exp-date').value || todayStr();
@@ -683,13 +716,16 @@ document.getElementById('sheet-save').onclick = async ()=>{
     const note = document.getElementById('exp-note').value.trim();
     const settled = document.getElementById('settle-switch').classList.contains('on');
     if(!amount || amount <= 0){ alert('Enter a valid amount.'); return; }
-    const payload = {type:'expense', date, category, paidTo, note, amount, settled, receipt: pendingReceipt};
+    const payload = {type:'expense', date, category, paidTo, note, amount, receipt: pendingReceipt};
+    let expenseEntry;
     if(editingId){
       const idx = entries.findIndex(x=>x.id===editingId);
-      if(idx > -1) entries[idx] = {...entries[idx], ...payload};
+      if(idx > -1){ entries[idx] = {...entries[idx], ...payload}; expenseEntry = entries[idx]; }
     } else {
-      entries.push({id:uid(), ...payload});
+      expenseEntry = {id:uid(), ...payload};
+      entries.push(expenseEntry);
     }
+    if(expenseEntry) syncReimbursement(expenseEntry, settled);
   } else {
     const date = document.getElementById('fund-date').value || todayStr();
     const amount = parseFloat(document.getElementById('fund-amount').value);
@@ -711,6 +747,16 @@ document.getElementById('sheet-save').onclick = async ()=>{
 document.getElementById('sheet-delete').onclick = async ()=>{
   if(!editingId) return;
   if(!confirm('Delete this entry?')) return;
+  const target = entries.find(e=>e.id===editingId);
+  // cascade: deleting an expense also removes its linked reimbursement transaction
+  if(target && target.type==='expense' && target.reimbursementEntryId){
+    entries = entries.filter(e=>e.id!==target.reimbursementEntryId);
+  }
+  // deleting a reimbursement transaction directly un-settles its parent expense
+  if(target && target.type==='fund' && target.linkedExpenseId){
+    const parent = entries.find(e=>e.id===target.linkedExpenseId);
+    if(parent){ parent.settled = false; parent.reimbursementEntryId = null; }
+  }
   entries = entries.filter(e=>e.id!==editingId);
   await save();
   render();
@@ -727,10 +773,13 @@ document.querySelectorAll('.chip').forEach(chip=>{
   };
 });
 
-/* Toggle settle status quickly from the row */
+/* Toggle settle status quickly from the row — creates/removes the actual reimbursement transaction */
 async function toggleSettled(id){
-  const idx = entries.findIndex(e=>e.id===id);
-  if(idx>-1){ entries[idx].settled = !entries[idx].settled; await save(); render(); }
+  const exp = entries.find(e=>e.id===id);
+  if(!exp) return;
+  syncReimbursement(exp, !exp.settled);
+  await save();
+  render();
 }
 
 const expenseIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h12"/></svg>';
@@ -805,7 +854,7 @@ function render(){
         const h = document.createElement('div'); h.className = 'date-heading'; h.textContent = dateFmt;
         list.appendChild(h); lastDate = dateFmt;
       }
-      const title = e.type==='expense' ? (e.category||'Expense') : 'Received from company';
+      const title = e.type==='expense' ? (e.category||'Expense') : (e.linkedExpenseId ? 'Reimbursement received' : 'Received from company');
       const detailParts = [];
       if(e.type==='expense' && e.paidTo) detailParts.push('Paid to ' + e.paidTo);
       if(e.note) detailParts.push(e.note);
@@ -829,7 +878,12 @@ function render(){
       `;
       row.addEventListener('click', (ev)=>{
         if(ev.target.closest('.status-pill')) return;
-        openSheetForEdit(e);
+        if(e.type==='fund' && e.linkedExpenseId){
+          const parent = entries.find(x=>x.id===e.linkedExpenseId);
+          openSheetForEdit(parent || e);
+        } else {
+          openSheetForEdit(e);
+        }
       });
       const sp = row.querySelector('.status-pill');
       if(sp){ sp.addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleSettled(e.id); }); }
