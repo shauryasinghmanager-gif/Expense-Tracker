@@ -224,6 +224,8 @@
     background:var(--surface);color:var(--text);font-size:14.5px;font-weight:500;margin-bottom:10px;font-family:'Inter',sans-serif;
   }
   .export-opt svg{width:19px;height:19px;color:var(--text-soft);flex:none;}
+  .export-opt.danger{border-color:var(--rust);color:var(--rust);background:var(--rust-bg);}
+  .export-opt.danger svg{color:var(--rust);}
   .export-note{font-size:12px;color:var(--text-soft);margin:-6px 0 14px;}
   .export-divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
   .export-section-lbl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-soft2);margin-bottom:8px;}
@@ -273,7 +275,7 @@
     <div class="appbar-actions">
       <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode"></button>
       <button class="icon-btn" id="export-btn" aria-label="Export">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
       </button>
     </div>
   </header>
@@ -463,6 +465,13 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
       <span>Everything you log — entries, receipts, settings — saves automatically to this browser. It's still here after a refresh or closing the app. It's tied to this browser/device though, so download a backup before switching phones or clearing browser data.</span>
     </div>
+
+    <hr class="export-divider">
+    <div class="export-section-lbl">Danger zone</div>
+    <button class="export-opt danger" id="clear-all-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      Clear all data & restart
+    </button>
   </div>
 
   <!-- Receipt lightbox -->
@@ -1023,6 +1032,22 @@ document.getElementById('restore-input').onchange = (e)=>{
 
 /* Export */
 const exportSheet = document.getElementById('export-sheet');
+
+document.getElementById('clear-all-btn').onclick = async ()=>{
+  if(entries.length === 0){ alert('There\'s nothing to clear — your ledger is already empty.'); return; }
+  const count = entries.length;
+  const sure = confirm(`Delete all ${count} entries and receipts?\n\nThis cannot be undone. If you want to keep a copy, tap "Download backup" first instead.`);
+  if(!sure) return;
+  const reallySure = confirm('Are you absolutely sure? This will permanently erase everything and restart the app with a clean slate.');
+  if(!reallySure) return;
+  entries = [];
+  await save();
+  render();
+  renderInsights();
+  renderReceipts();
+  exportSheet.classList.remove('open'); exportBackdrop.classList.remove('open');
+  alert('All data cleared. Starting fresh.');
+};
 const exportBackdrop = document.getElementById('export-backdrop');
 document.getElementById('export-btn').onclick = ()=>{
   document.getElementById('export-scope-note').textContent =
