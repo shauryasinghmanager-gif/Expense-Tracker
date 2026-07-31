@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.shauryasinghmanager_gif.twa",
+        "sha256_cert_fingerprints": ["66:5E:6B:A0:1E:41:3B:0B:D6:B0:AD:21:35:18:E9:D4:25:CD:6C:8B:09:83:B6:F7:8F:69:17:66:21:43:0D:FB"]
+      }
+    }]
